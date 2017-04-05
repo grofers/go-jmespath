@@ -2,6 +2,7 @@ package jmespath
 
 import (
 	"errors"
+	"encoding/json"
 	"reflect"
 )
 
@@ -48,7 +49,7 @@ func isFalse(value interface{}) bool {
 // It will take two arbitrary objects and recursively determine
 // if they are equal.
 func objsEqual(left interface{}, right interface{}) bool {
-	return reflect.DeepEqual(left, right)
+	return DeepEqual(left, right)
 }
 
 // SliceParam refers to a single part of a slice.
@@ -147,7 +148,15 @@ func toArrayNum(data interface{}) ([]float64, bool) {
 		for i, el := range d {
 			item, ok := el.(float64)
 			if !ok {
-				return nil, false
+				item_num, ok2 := el.(json.Number)
+				if !ok2 {
+					return nil, false
+				}
+				var err error
+				item, err = item_num.Float64()
+				if err != nil {
+					return nil, false
+				}
 			}
 			result[i] = item
 		}

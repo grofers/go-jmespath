@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"unicode"
 	"unicode/utf8"
+	conv "github.com/cstockton/go-conv"
+	reflections "github.com/oleiade/reflections"
 )
 
 /* This is a tree based interpreter.  It walks the AST and directly
@@ -45,13 +47,13 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		case tNE:
 			return !objsEqual(left, right), nil
 		}
-		leftNum, ok := left.(float64)
-		if !ok {
-			return nil, nil
+		leftNum, err := conv.Float64(left)
+		if err != nil {
+			return nil, err
 		}
-		rightNum, ok := right.(float64)
-		if !ok {
-			return nil, nil
+		rightNum, err := conv.Float64(right)
+		if err != nil {
+			return nil, err
 		}
 		switch node.value {
 		case tGT:
@@ -314,12 +316,28 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 	return nil, errors.New("Unknown AST node: " + node.nodeType.String())
 }
 
+func fieldNameFromStructTag(key string, value interface{}) string {
+	// TODO: This is not efficient. tag_map must be put in a global cache
+	tag_map, err := reflections.TagMap(value, "json")
+	fieldName := ""
+	if err == nil {
+		ok := false
+		fieldName, ok = tag_map[key]
+		if !ok {
+			fieldName = ""
+		}
+	}
+	if fieldName == "" {
+		first, n := utf8.DecodeRuneInString(key)
+		fieldName = string(unicode.ToUpper(first)) + key[n:]
+	}
+	return fieldName
+}
+
 func (intr *treeInterpreter) fieldFromStruct(key string, value interface{}) (interface{}, error) {
 	rv := reflect.ValueOf(value)
-	first, n := utf8.DecodeRuneInString(key)
-	fieldName := string(unicode.ToUpper(first)) + key[n:]
 	if rv.Kind() == reflect.Struct {
-		v := rv.FieldByName(fieldName)
+		v := rv.FieldByName(fieldNameFromStructTag(key, value))
 		if !v.IsValid() {
 			return nil, nil
 		}
@@ -330,7 +348,7 @@ func (intr *treeInterpreter) fieldFromStruct(key string, value interface{}) (int
 			return nil, nil
 		}
 		rv = rv.Elem()
-		v := rv.FieldByName(fieldName)
+		v := rv.FieldByName(fieldNameFromStructTag(key, value))
 		if !v.IsValid() {
 			return nil, nil
 		}

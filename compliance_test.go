@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"bytes"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -65,6 +66,7 @@ func TestCompliance(t *testing.T) {
 	if assert.Nil(err) {
 		for _, filename := range complianceFiles {
 			runComplianceTest(assert, filename)
+			runComplianceTestJsonNumber(assert, filename)
 		}
 	}
 }
@@ -74,6 +76,21 @@ func runComplianceTest(assert *assert.Assertions, filename string) {
 	data, err := ioutil.ReadFile(filename)
 	if assert.Nil(err) {
 		err := json.Unmarshal(data, &testSuites)
+		if assert.Nil(err) {
+			for _, testsuite := range testSuites {
+				runTestSuite(assert, testsuite, filename)
+			}
+		}
+	}
+}
+
+func runComplianceTestJsonNumber(assert *assert.Assertions, filename string) {
+	var testSuites []TestSuite
+	data, err := ioutil.ReadFile(filename)
+	if assert.Nil(err) {
+		d := json.NewDecoder(bytes.NewReader(data))
+		d.UseNumber()
+		err := d.Decode(&testSuites)
 		if assert.Nil(err) {
 			for _, testsuite := range testSuites {
 				runTestSuite(assert, testsuite, filename)
@@ -118,6 +135,19 @@ func runTestCase(assert *assert.Assertions, given interface{}, testcase TestCase
 	}
 	actual, err := Search(testcase.Expression, given)
 	if assert.Nil(err, fmt.Sprintf("Expression: %s", testcase.Expression)) {
-		assert.Equal(testcase.Result, actual, fmt.Sprintf("Expression: %s", testcase.Expression))
+		assert.Equal(force_parse(testcase.Result), force_parse(actual), fmt.Sprintf("Expression: %s", testcase.Expression))
 	}
+}
+
+func force_parse(result interface {}) interface{} {
+	var result_parsed interface{}
+	result_m, err := json.Marshal(result)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(result_m, &result_parsed)
+	if err != nil {
+		panic(err)
+	}
+	return result_parsed
 }
