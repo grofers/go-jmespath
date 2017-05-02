@@ -192,3 +192,13 @@ func isSliceType(v interface{}) bool {
 	}
 	return reflect.TypeOf(v).Kind() == reflect.Slice
 }
+
+func stripPtrs(rv reflect.Value) (reflect.Value, error) {
+	for rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return rv, errors.New("Pointer is nil")
+		}
+		rv = rv.Elem()
+	}
+	return rv, nil
+}
