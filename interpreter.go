@@ -31,13 +31,18 @@ type expRef struct {
 // It will produce the result of applying the JMESPath expression associated
 // with the ASTNode to the input data "value".
 func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface{}, error) {
+	rootValue := value
+	return intr.execute(node, value, rootValue)
+}
+
+func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue interface{}) (interface{}, error) {
 	switch node.nodeType {
 	case ASTComparator:
-		left, err := intr.Execute(node.children[0], value)
+		left, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
-		right, err := intr.Execute(node.children[1], value)
+		right, err := intr.execute(node.children[1], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +75,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 	case ASTFunctionExpression:
 		resolvedArgs := []interface{}{}
 		for _, arg := range node.children {
-			current, err := intr.Execute(arg, value)
+			current, err := intr.execute(arg, value, rootValue)
 			if err != nil {
 				return nil, err
 			}
@@ -80,7 +85,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 	case ASTField:
 		return intr.fieldFromStructOrMap(node.value.(string), value)
 	case ASTFilterProjection:
-		left, err := intr.Execute(node.children[0], value)
+		left, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, nil
 		}
@@ -94,12 +99,12 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		compareNode := node.children[2]
 		collected := []interface{}{}
 		for _, element := range sliceType {
-			result, err := intr.Execute(compareNode, element)
+			result, err := intr.execute(compareNode, element, rootValue)
 			if err != nil {
 				return nil, err
 			}
 			if !isFalse(result) {
-				current, err := intr.Execute(node.children[1], element)
+				current, err := intr.execute(node.children[1], element, rootValue)
 				if err != nil {
 					return nil, err
 				}
@@ -110,7 +115,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		return collected, nil
 	case ASTFlatten:
-		left, err := intr.Execute(node.children[0], value)
+		left, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, nil
 		}
@@ -142,6 +147,8 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		return flattened, nil
 	case ASTIdentity, ASTCurrentNode:
 		return value, nil
+	case ASTRootNode:
+		return rootValue, nil
 	case ASTIndex:
 		if sliceType, ok := value.([]interface{}); ok {
 			index := node.value.(int)
@@ -167,7 +174,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		return nil, nil
 	case ASTKeyValPair:
-		return intr.Execute(node.children[0], value)
+		return intr.execute(node.children[0], value, rootValue)
 	case ASTLiteral:
 		return node.value, nil
 	case ASTMultiSelectHash:
@@ -176,7 +183,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		collected := make(map[string]interface{})
 		for _, child := range node.children {
-			current, err := intr.Execute(child, value)
+			current, err := intr.execute(child, value, rootValue)
 			if err != nil {
 				return nil, err
 			}
@@ -190,7 +197,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		collected := []interface{}{}
 		for _, child := range node.children {
-			current, err := intr.Execute(child, value)
+			current, err := intr.execute(child, value, rootValue)
 			if err != nil {
 				return nil, err
 			}
@@ -198,28 +205,28 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		return collected, nil
 	case ASTOrExpression:
-		matched, err := intr.Execute(node.children[0], value)
+		matched, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
 		if isFalse(matched) {
-			matched, err = intr.Execute(node.children[1], value)
+			matched, err = intr.execute(node.children[1], value, rootValue)
 			if err != nil {
 				return nil, err
 			}
 		}
 		return matched, nil
 	case ASTAndExpression:
-		matched, err := intr.Execute(node.children[0], value)
+		matched, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
 		if isFalse(matched) {
 			return matched, nil
 		}
-		return intr.Execute(node.children[1], value)
+		return intr.execute(node.children[1], value, rootValue)
 	case ASTNotExpression:
-		matched, err := intr.Execute(node.children[0], value)
+		matched, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
@@ -231,14 +238,14 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		result := value
 		var err error
 		for _, child := range node.children {
-			result, err = intr.Execute(child, result)
+			result, err = intr.execute(child, result, rootValue)
 			if err != nil {
 				return nil, err
 			}
 		}
 		return result, nil
 	case ASTProjection:
-		left, err := intr.Execute(node.children[0], value)
+		left, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +259,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		collected := []interface{}{}
 		var current interface{}
 		for _, element := range sliceType {
-			current, err = intr.Execute(node.children[1], element)
+			current, err = intr.execute(node.children[1], element, rootValue)
 			if err != nil {
 				return nil, err
 			}
@@ -262,11 +269,11 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		return collected, nil
 	case ASTSubexpression, ASTIndexExpression:
-		left, err := intr.Execute(node.children[0], value)
+		left, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, err
 		}
-		return intr.Execute(node.children[1], left)
+		return intr.execute(node.children[1], left, rootValue)
 	case ASTSlice:
 		sliceType, ok := value.([]interface{})
 		if !ok {
@@ -285,7 +292,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		return slice(sliceType, sliceParams)
 	case ASTValueProjection:
-		left, err := intr.Execute(node.children[0], value)
+		left, err := intr.execute(node.children[0], value, rootValue)
 		if err != nil {
 			return nil, nil
 		}
@@ -299,7 +306,7 @@ func (intr *treeInterpreter) Execute(node ASTNode, value interface{}) (interface
 		}
 		collected := []interface{}{}
 		for _, element := range values {
-			current, err := intr.Execute(node.children[1], element)
+			current, err := intr.execute(node.children[1], element, rootValue)
 			if err != nil {
 				return nil, err
 			}

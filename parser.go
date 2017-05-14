@@ -34,6 +34,7 @@ const (
 	ASTSubexpression
 	ASTSlice
 	ASTValueProjection
+	ASTRootNode
 )
 
 // ASTNode represents the abstract syntax tree of a JMESPath expression.
@@ -87,6 +88,7 @@ var bindingPowers = map[tokType]int{
 	tRbrace:             0,
 	tNumber:             0,
 	tCurrent:            0,
+	tRoot:               0,
 	tExpref:             0,
 	tColon:              0,
 	tPipe:               1,
@@ -385,6 +387,8 @@ func (p *Parser) nud(token token) (ASTNode, error) {
 		}
 	case tCurrent:
 		return ASTNode{nodeType: ASTCurrentNode}, nil
+	case tRoot:
+		return ASTNode{nodeType: ASTRootNode}, nil
 	case tExpref:
 		expression, err := p.parseExpression(bindingPowers[tExpref])
 		if err != nil {
