@@ -315,6 +315,13 @@ func newFunctionCaller() *functionCaller {
 			handler:   jpfSortBy,
 			hasExpRef: true,
 		},
+		"dedup": {
+			name: "dedup",
+			arguments: []argSpec{
+				{types: []jpType{jpArrayString, jpArrayNumber}},
+			},
+			handler: jpfDedup,
+		},
 		"join": {
 			name: "join",
 			arguments: []argSpec{
@@ -870,6 +877,25 @@ func jpfSortBy(arguments []interface{}) (interface{}, error) {
 	} else {
 		return nil, errors.New("invalid type, must be number of string")
 	}
+}
+func jpfDedup(arguments []interface{}) (interface{}, error) {
+	items := arguments[0]
+	items_d, ok := items.([]interface{})
+	if !ok {
+		return nil, errors.New("Invalid arguments to dedup. Expected an array.")
+	}
+	found := make(map[interface{}]bool)
+	final := make([]interface{}, len(items_d))
+	j := 0
+	for _, val := range items_d {
+		if !found[val] {
+			found[val] = true
+			final[j] = val
+			j++
+		}
+	}
+	final = final[:j]
+	return final, nil
 }
 func jpfJoin(arguments []interface{}) (interface{}, error) {
 	sep := arguments[0].(string)
