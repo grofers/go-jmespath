@@ -1,6 +1,7 @@
 package jmespath
 
 import (
+	"fmt"
 	"errors"
 	"reflect"
 	"unicode"
@@ -173,7 +174,7 @@ func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue 
 			}
 		}
 		return nil, nil
-	case ASTKeyValPair:
+	case ASTKeyValPair, ASTKeyValExprPair:
 		return intr.execute(node.children[0], value, rootValue)
 	case ASTLiteral:
 		return node.value, nil
@@ -187,7 +188,21 @@ func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue 
 			if err != nil {
 				return nil, err
 			}
-			key := child.value.(string)
+			var key string
+			if child.nodeType == ASTKeyValExprPair {
+				key_expr, err := intr.execute(child.value.(ASTNode), value, rootValue)
+				if err != nil {
+					return nil, err
+				}
+				inner_node := key_expr.(expRef).ref
+				key_i, err := intr.execute(inner_node, value, rootValue)
+				if err != nil {
+					return nil, err
+				}
+				key = fmt.Sprintf("%s", key_i)
+			} else {
+				key = child.value.(string)
+			}
 			collected[key] = current
 		}
 		return collected, nil

@@ -35,6 +35,7 @@ const (
 	ASTSlice
 	ASTValueProjection
 	ASTRootNode
+	ASTKeyValExprPair
 )
 
 // ASTNode represents the abstract syntax tree of a JMESPath expression.
@@ -447,12 +448,25 @@ func (p *Parser) parseMultiSelectHash() (ASTNode, error) {
 	var children []ASTNode
 	for {
 		keyToken := p.lookaheadToken(0)
-		if err := p.match(tUnquotedIdentifier); err != nil {
-			if err := p.match(tQuotedIdentifier); err != nil {
-				return ASTNode{}, p.syntaxError("Expected tQuotedIdentifier or tUnquotedIdentifier")
+		var keyName string
+		var keyNameExpr ASTNode
+		has_expressions := false
+		if keyToken.tokenType == tExpref {
+			var err error
+			keyNameExpr, err = p.parseExpression(0)
+			if err != nil {
+				return ASTNode{}, err
 			}
+			has_expressions = true
+		} else {
+			if err := p.match(tUnquotedIdentifier); err != nil {
+				if err := p.match(tQuotedIdentifier); err != nil {
+					return ASTNode{}, p.syntaxError("Expected tQuotedIdentifier or tUnquotedIdentifier")
+				}
+			}
+			keyName = keyToken.value
 		}
-		keyName := keyToken.value
+
 		err := p.match(tColon)
 		if err != nil {
 			return ASTNode{}, err
@@ -463,8 +477,12 @@ func (p *Parser) parseMultiSelectHash() (ASTNode, error) {
 		}
 		node := ASTNode{
 			nodeType: ASTKeyValPair,
-			value:    keyName,
+			value: keyName,
 			children: []ASTNode{value},
+		}
+		if has_expressions {
+			node.value = keyNameExpr
+			node.nodeType = ASTKeyValExprPair
 		}
 		children = append(children, node)
 		if p.current() == tComma {
