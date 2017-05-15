@@ -306,6 +306,13 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfZip,
 		},
+		"items": {
+			name: "items",
+			arguments: []argSpec{
+				{types: []jpType{jpObject}},
+			},
+			handler: jpfItems,
+		},
 		"sort": {
 			name: "sort",
 			arguments: []argSpec{
@@ -351,12 +358,12 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfToArray,
 		},
-		"to_object": {
-			name: "to_object",
+		"from_items": {
+			name: "from_items",
 			arguments: []argSpec{
 				{types: []jpType{jpArray}},
 			},
-			handler: jpfToObject,
+			handler: jpfFromItems,
 		},
 		"to_string": {
 			name: "to_string",
@@ -854,6 +861,14 @@ func jpfZip(arguments []interface{}) (interface{}, error) {
 	}
 	return final, nil
 }
+func jpfItems(arguments []interface{}) (interface{}, error) {
+	arg := arguments[0].(map[string]interface{})
+	collected := make([][]interface{}, 0, len(arg))
+	for key, value := range arg {
+		collected = append(collected, []interface{}{key, value})
+	}
+	return collected, nil
+}
 func jpfSort(arguments []interface{}) (interface{}, error) {
 	if items, ok := toArrayNum(arguments[0]); ok {
 		d := sort.Float64Slice(items)
@@ -964,7 +979,7 @@ func jpfToArray(arguments []interface{}) (interface{}, error) {
 	}
 	return arguments[:1:1], nil
 }
-func jpfToObject(arguments []interface{}) (interface{}, error) {
+func jpfFromItems(arguments []interface{}) (interface{}, error) {
 	mainArr := arguments[0].([][]interface{})
 	final := make(map[string]interface{})
 	for _, item := range mainArr {
