@@ -1,7 +1,6 @@
 package jmespath
 
 import (
-	"fmt"
 	"errors"
 	"reflect"
 	"unicode"
@@ -199,7 +198,10 @@ func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue 
 				if err != nil {
 					return nil, err
 				}
-				key = fmt.Sprintf("%s", key_i)
+				key, err = convToString(key_i)
+				if err != nil {
+					return nil, err
+				}
 			} else {
 				key = child.value.(string)
 			}
