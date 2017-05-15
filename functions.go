@@ -299,6 +299,13 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfValues,
 		},
+		"zip": {
+			name: "zip",
+			arguments: []argSpec{
+				{types: []jpType{jpArray}, variadic: true},
+			},
+			handler: jpfZip,
+		},
 		"sort": {
 			name: "sort",
 			arguments: []argSpec{
@@ -818,6 +825,27 @@ func jpfValues(arguments []interface{}) (interface{}, error) {
 		collected = append(collected, value)
 	}
 	return collected, nil
+}
+func jpfZip(arguments []interface{}) (interface{}, error) {
+	final := [][]interface{}{}
+	num_arrs := len(arguments)
+	for i := 0; true; i++ {
+		limit_hit := false
+		temp := make([]interface{}, num_arrs)
+		for j := 0; j < num_arrs; j++ {
+			tarr := arguments[j].([]interface{})
+			if i >= len(tarr) {
+				limit_hit = true
+				break
+			}
+			temp[j] = tarr[i]
+		}
+		if limit_hit {
+			break
+		}
+		final = append(final, temp)
+	}
+	return final, nil
 }
 func jpfSort(arguments []interface{}) (interface{}, error) {
 	if items, ok := toArrayNum(arguments[0]); ok {
