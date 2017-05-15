@@ -93,7 +93,7 @@ func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue 
 		sliceType, ok := left.([]interface{})
 		if !ok {
 			if isSliceType(left) {
-				return intr.filterProjectionWithReflection(node, left)
+				return intr.filterProjectionWithReflection(node, left, rootValue)
 			}
 			return nil, nil
 		}
@@ -267,7 +267,7 @@ func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue 
 		sliceType, ok := left.([]interface{})
 		if !ok {
 			if isSliceType(left) {
-				return intr.projectWithReflection(node, left)
+				return intr.projectWithReflection(node, left, rootValue)
 			}
 			return nil, nil
 		}
@@ -421,18 +421,18 @@ func (intr *treeInterpreter) sliceWithReflection(node ASTNode, value interface{}
 	return slice(final, sliceParams)
 }
 
-func (intr *treeInterpreter) filterProjectionWithReflection(node ASTNode, value interface{}) (interface{}, error) {
+func (intr *treeInterpreter) filterProjectionWithReflection(node ASTNode, value interface{}, rootValue interface{}) (interface{}, error) {
 	compareNode := node.children[2]
 	collected := []interface{}{}
 	v := reflect.ValueOf(value)
 	for i := 0; i < v.Len(); i++ {
 		element := v.Index(i).Interface()
-		result, err := intr.Execute(compareNode, element)
+		result, err := intr.execute(compareNode, element, rootValue)
 		if err != nil {
 			return nil, err
 		}
 		if !isFalse(result) {
-			current, err := intr.Execute(node.children[1], element)
+			current, err := intr.execute(node.children[1], element, rootValue)
 			if err != nil {
 				return nil, err
 			}
@@ -444,12 +444,12 @@ func (intr *treeInterpreter) filterProjectionWithReflection(node ASTNode, value 
 	return collected, nil
 }
 
-func (intr *treeInterpreter) projectWithReflection(node ASTNode, value interface{}) (interface{}, error) {
+func (intr *treeInterpreter) projectWithReflection(node ASTNode, value interface{}, rootValue interface{}) (interface{}, error) {
 	collected := []interface{}{}
 	v := reflect.ValueOf(value)
 	for i := 0; i < v.Len(); i++ {
 		element := v.Index(i).Interface()
-		result, err := intr.Execute(node.children[1], element)
+		result, err := intr.execute(node.children[1], element, rootValue)
 		if err != nil {
 			return nil, err
 		}
