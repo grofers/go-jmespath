@@ -351,6 +351,13 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfToArray,
 		},
+		"to_object": {
+			name: "to_object",
+			arguments: []argSpec{
+				{types: []jpType{jpArray}},
+			},
+			handler: jpfToObject,
+		},
 		"to_string": {
 			name: "to_string",
 			arguments: []argSpec{
@@ -957,15 +964,41 @@ func jpfToArray(arguments []interface{}) (interface{}, error) {
 	}
 	return arguments[:1:1], nil
 }
+func jpfToObject(arguments []interface{}) (interface{}, error) {
+	mainArr := arguments[0].([][]interface{})
+	final := make(map[string]interface{})
+	for _, item := range mainArr {
+		if len(item) == 0 {
+			continue
+		}
+		key, err := convToString(item[0])
+		if err != nil {
+			continue
+		}
+		values := item[1:]
+		initValue, ok := final[key]
+		if !ok {
+			if len(values) > 1 {
+				final[key] = values
+			} else {
+				final[key] = values[0]
+			}
+		} else {
+			v, ok := initValue.([]interface{})
+			if !ok {
+				v = []interface{} {initValue}
+			}
+			if len(values) > 1 {
+				final[key] = append(v, values...)
+			} else {
+				final[key] = append(v, values[0])
+			}
+		}
+	}
+	return final, nil
+}
 func jpfToString(arguments []interface{}) (interface{}, error) {
-	if v, ok := arguments[0].(string); ok {
-		return v, nil
-	}
-	result, err := json.Marshal(arguments[0])
-	if err != nil {
-		return nil, err
-	}
-	return string(result), nil
+	return convToString(arguments[0])
 }
 func jpfToNumber(arguments []interface{}) (interface{}, error) {
 	arg := arguments[0]
