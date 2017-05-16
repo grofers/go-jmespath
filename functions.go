@@ -847,8 +847,8 @@ func jpfZip(arguments []interface{}) (interface{}, error) {
 		limit_hit := false
 		temp := make([]interface{}, num_arrs)
 		for j := 0; j < num_arrs; j++ {
-			tarr := arguments[j].([]interface{})
-			if i >= len(tarr) {
+			tarr, ok := arguments[j].([]interface{})
+			if !ok || i >= len(tarr) {
 				limit_hit = true
 				break
 			}
