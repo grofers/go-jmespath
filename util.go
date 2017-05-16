@@ -199,6 +199,10 @@ func stripPtrs(rv reflect.Value) (reflect.Value, error) {
 			return rv, errors.New("Pointer is nil")
 		}
 		rv = rv.Elem()
+		if rv.Kind() == reflect.Interface {
+			// Try to reassess type
+			rv = reflect.ValueOf(rv.Interface())
+		}
 	}
 	return rv, nil
 }
