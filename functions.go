@@ -299,6 +299,14 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfValues,
 		},
+		"get": {
+			name: "get",
+			arguments: []argSpec{
+				{types: []jpType{jpObject}},
+				{types: []jpType{jpString}},
+			},
+			handler: jpfGet,
+		},
 		"zip": {
 			name: "zip",
 			arguments: []argSpec{
@@ -839,6 +847,15 @@ func jpfValues(arguments []interface{}) (interface{}, error) {
 		collected = append(collected, value)
 	}
 	return collected, nil
+}
+func jpfGet(arguments []interface{}) (interface{}, error) {
+	obj := arguments[0].(map[string]interface{})
+	key := arguments[1].(string)
+	val, ok := obj[key]
+	if !ok {
+		return nil, errors.New("Key not found")
+	}
+	return val, nil
 }
 func jpfZip(arguments []interface{}) (interface{}, error) {
 	final := [][]interface{}{}
