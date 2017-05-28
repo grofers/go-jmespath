@@ -344,6 +344,15 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfDedup,
 		},
+		"dedup_by": {
+			name: "dedup_by",
+			arguments: []argSpec{
+				{types: []jpType{jpArray}},
+				{types: []jpType{jpExpref}},
+			},
+			handler:   jpfDedupBy,
+			hasExpRef: true,
+		},
 		"join": {
 			name: "join",
 			arguments: []argSpec{
@@ -958,6 +967,33 @@ func jpfDedup(arguments []interface{}) (interface{}, error) {
 		if !found[val] {
 			found[val] = true
 			final[j] = val
+			j++
+		}
+	}
+	final = final[:j]
+	return final, nil
+}
+func jpfDedupBy(arguments []interface{}) (interface{}, error) {
+	intr := arguments[0].(*treeInterpreter)
+	arr := arguments[1].([]interface{})
+	exp := arguments[2].(expRef)
+	node := exp.ref
+	if len(arr) == 0 {
+		return arr, nil
+	} else if len(arr) == 1 {
+		return arr, nil
+	}
+	found := make(map[interface{}]bool)
+	final := make([]interface{}, len(arr))
+	j := 0
+	for _, elem := range arr {
+		val, err := intr.Execute(node, elem)
+		if err != nil {
+			return nil, err
+		}
+		if !found[val] {
+			found[val] = true
+			final[j] = elem
 			j++
 		}
 	}
