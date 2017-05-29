@@ -374,6 +374,10 @@ func (intr *treeInterpreter) fieldFromStructOrMap(key string, value interface{})
 		return v.Interface(), nil
 	} else if rv.Kind() == reflect.Map {
 		field := rv.MapIndex(reflect.ValueOf(key))
+		field, err = stripPtrs(field)
+		if err != nil {
+			return nil, nil
+		}
 		if field.IsValid() {
 			return field.Interface(), nil
 		} else {

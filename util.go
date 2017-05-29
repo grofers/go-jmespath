@@ -194,6 +194,11 @@ func isSliceType(v interface{}) bool {
 }
 
 func stripPtrs(rv reflect.Value) (reflect.Value, error) {
+	// Some pointer chains are disguised as interface
+	if rv.Kind() == reflect.Interface {
+		// Try to reassess type
+		rv = reflect.ValueOf(rv.Interface())
+	}
 	for rv.Kind() == reflect.Ptr {
 		if rv.IsNil() {
 			return rv, errors.New("Pointer is nil")
