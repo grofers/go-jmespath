@@ -471,7 +471,7 @@ func (a *argSpec) typeCheck(arg interface{}) error {
 	return fmt.Errorf("Invalid type for: %v, expected: %#v", arg, a.types)
 }
 
-func (f *functionCaller) CallFunction(name string, arguments []interface{}, intr *treeInterpreter) (interface{}, error) {
+func (f *functionCaller) CallFunction(name string, arguments []interface{}, intr *treeInterpreter, rootValue interface{}) (interface{}, error) {
 	entry, ok := f.functionTable[name]
 	if !ok {
 		return nil, errors.New("unknown function: " + name)
@@ -483,6 +483,7 @@ func (f *functionCaller) CallFunction(name string, arguments []interface{}, intr
 	if entry.hasExpRef {
 		var extra []interface{}
 		extra = append(extra, intr)
+		extra = append(extra, rootValue)
 		resolvedArgs = append(extra, resolvedArgs...)
 	}
 	return entry.handler(resolvedArgs)
@@ -569,12 +570,13 @@ func jpfFloor(arguments []interface{}) (interface{}, error) {
 }
 func jpfMap(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
-	exp := arguments[1].(expRef)
+	root := arguments[1].(interface{})
+	exp := arguments[2].(expRef)
 	node := exp.ref
-	arr := arguments[2].([]interface{})
+	arr := arguments[3].([]interface{})
 	mapped := make([]interface{}, 0, len(arr))
 	for _, value := range arr {
-		current, err := intr.Execute(node, value)
+		current, err := intr.execute(node, value, root)
 		if err != nil {
 			return nil, err
 		}
@@ -626,8 +628,8 @@ func jpfMerge(arguments []interface{}) (interface{}, error) {
 }
 func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
-	arr := arguments[1].([]interface{})
-	exp := arguments[2].(expRef)
+	arr := arguments[2].([]interface{})
+	exp := arguments[3].(expRef)
 	node := exp.ref
 	if len(arr) == 0 {
 		return nil, nil
@@ -743,8 +745,8 @@ func jpfMin(arguments []interface{}) (interface{}, error) {
 
 func jpfMinBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
-	arr := arguments[1].([]interface{})
-	exp := arguments[2].(expRef)
+	arr := arguments[2].([]interface{})
+	exp := arguments[3].(expRef)
 	node := exp.ref
 	if len(arr) == 0 {
 		return nil, nil
@@ -917,8 +919,8 @@ func jpfSort(arguments []interface{}) (interface{}, error) {
 }
 func jpfSortBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
-	arr := arguments[1].([]interface{})
-	exp := arguments[2].(expRef)
+	arr := arguments[2].([]interface{})
+	exp := arguments[3].(expRef)
 	node := exp.ref
 	if len(arr) == 0 {
 		return arr, nil
@@ -975,8 +977,8 @@ func jpfDedup(arguments []interface{}) (interface{}, error) {
 }
 func jpfDedupBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
-	arr := arguments[1].([]interface{})
-	exp := arguments[2].(expRef)
+	arr := arguments[2].([]interface{})
+	exp := arguments[3].(expRef)
 	node := exp.ref
 	if len(arr) == 0 {
 		return arr, nil

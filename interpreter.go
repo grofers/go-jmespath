@@ -81,7 +81,7 @@ func (intr *treeInterpreter) execute(node ASTNode, value interface{}, rootValue 
 			}
 			resolvedArgs = append(resolvedArgs, current)
 		}
-		return intr.fCall.CallFunction(node.value.(string), resolvedArgs, intr)
+		return intr.fCall.CallFunction(node.value.(string), resolvedArgs, intr, rootValue)
 	case ASTField:
 		return intr.fieldFromStructOrMap(node.value.(string), value)
 	case ASTFilterProjection:
