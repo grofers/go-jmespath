@@ -42,6 +42,7 @@ type argSpec struct {
 
 type byExprString struct {
 	intr     *treeInterpreter
+	root     interface{}
 	node     ASTNode
 	items    []interface{}
 	hasError bool
@@ -54,7 +55,7 @@ func (a *byExprString) Swap(i, j int) {
 	a.items[i], a.items[j] = a.items[j], a.items[i]
 }
 func (a *byExprString) Less(i, j int) bool {
-	first, err := a.intr.Execute(a.node, a.items[i])
+	first, err := a.intr.execute(a.node, a.items[i], a.root)
 	if err != nil {
 		a.hasError = true
 		// Return a dummy value.
@@ -65,7 +66,7 @@ func (a *byExprString) Less(i, j int) bool {
 		a.hasError = true
 		return true
 	}
-	second, err := a.intr.Execute(a.node, a.items[j])
+	second, err := a.intr.execute(a.node, a.items[j], a.root)
 	if err != nil {
 		a.hasError = true
 		// Return a dummy value.
@@ -81,6 +82,7 @@ func (a *byExprString) Less(i, j int) bool {
 
 type byExprFloat struct {
 	intr     *treeInterpreter
+	root     interface{}
 	node     ASTNode
 	items    []interface{}
 	hasError bool
@@ -93,7 +95,7 @@ func (a *byExprFloat) Swap(i, j int) {
 	a.items[i], a.items[j] = a.items[j], a.items[i]
 }
 func (a *byExprFloat) Less(i, j int) bool {
-	first, err := a.intr.Execute(a.node, a.items[i])
+	first, err := a.intr.execute(a.node, a.items[i], a.root)
 	if err != nil {
 		a.hasError = true
 		// Return a dummy value.
@@ -104,7 +106,7 @@ func (a *byExprFloat) Less(i, j int) bool {
 		a.hasError = true
 		return true
 	}
-	second, err := a.intr.Execute(a.node, a.items[j])
+	second, err := a.intr.execute(a.node, a.items[j], a.root)
 	if err != nil {
 		a.hasError = true
 		// Return a dummy value.
@@ -120,6 +122,7 @@ func (a *byExprFloat) Less(i, j int) bool {
 
 type byExprJsonNum struct {
 	intr     *treeInterpreter
+	root     interface{}
 	node     ASTNode
 	items    []interface{}
 	hasError bool
@@ -132,7 +135,7 @@ func (a *byExprJsonNum) Swap(i, j int) {
 	a.items[i], a.items[j] = a.items[j], a.items[i]
 }
 func (a *byExprJsonNum) Less(i, j int) bool {
-	first, err := a.intr.Execute(a.node, a.items[i])
+	first, err := a.intr.execute(a.node, a.items[i], a.root)
 	if err != nil {
 		a.hasError = true
 		// Return a dummy value.
@@ -143,7 +146,7 @@ func (a *byExprJsonNum) Less(i, j int) bool {
 		a.hasError = true
 		return true
 	}
-	second, err := a.intr.Execute(a.node, a.items[j])
+	second, err := a.intr.execute(a.node, a.items[j], a.root)
 	if err != nil {
 		a.hasError = true
 		// Return a dummy value.
@@ -628,6 +631,7 @@ func jpfMerge(arguments []interface{}) (interface{}, error) {
 }
 func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
+	root := arguments[1].(interface{})
 	arr := arguments[2].([]interface{})
 	exp := arguments[3].(expRef)
 	node := exp.ref
@@ -636,7 +640,7 @@ func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 	} else if len(arr) == 1 {
 		return arr[0], nil
 	}
-	start, err := intr.Execute(node, arr[0])
+	start, err := intr.execute(node, arr[0], root)
 	if err != nil {
 		return nil, err
 	}
@@ -645,7 +649,7 @@ func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 		bestVal := t
 		bestItem := arr[0]
 		for _, item := range arr[1:] {
-			result, err := intr.Execute(node, item)
+			result, err := intr.execute(node, item, root)
 			if err != nil {
 				return nil, err
 			}
@@ -666,7 +670,7 @@ func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 		}
 		bestItem := arr[0]
 		for _, item := range arr[1:] {
-			result, err := intr.Execute(node, item)
+			result, err := intr.execute(node, item, root)
 			if err != nil {
 				return nil, err
 			}
@@ -684,7 +688,7 @@ func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 		bestVal := t
 		bestItem := arr[0]
 		for _, item := range arr[1:] {
-			result, err := intr.Execute(node, item)
+			result, err := intr.execute(node, item, root)
 			if err != nil {
 				return nil, err
 			}
@@ -745,6 +749,7 @@ func jpfMin(arguments []interface{}) (interface{}, error) {
 
 func jpfMinBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
+	root := arguments[1].(interface{})
 	arr := arguments[2].([]interface{})
 	exp := arguments[3].(expRef)
 	node := exp.ref
@@ -753,7 +758,7 @@ func jpfMinBy(arguments []interface{}) (interface{}, error) {
 	} else if len(arr) == 1 {
 		return arr[0], nil
 	}
-	start, err := intr.Execute(node, arr[0])
+	start, err := intr.execute(node, arr[0], root)
 	if err != nil {
 		return nil, err
 	}
@@ -761,7 +766,7 @@ func jpfMinBy(arguments []interface{}) (interface{}, error) {
 		bestVal := t
 		bestItem := arr[0]
 		for _, item := range arr[1:] {
-			result, err := intr.Execute(node, item)
+			result, err := intr.execute(node, item, root)
 			if err != nil {
 				return nil, err
 			}
@@ -782,7 +787,7 @@ func jpfMinBy(arguments []interface{}) (interface{}, error) {
 		}
 		bestItem := arr[0]
 		for _, item := range arr[1:] {
-			result, err := intr.Execute(node, item)
+			result, err := intr.execute(node, item, root)
 			if err != nil {
 				return nil, err
 			}
@@ -800,7 +805,7 @@ func jpfMinBy(arguments []interface{}) (interface{}, error) {
 		bestVal := t
 		bestItem := arr[0]
 		for _, item := range arr[1:] {
-			result, err := intr.Execute(node, item)
+			result, err := intr.execute(node, item, root)
 			if err != nil {
 				return nil, err
 			}
@@ -919,6 +924,7 @@ func jpfSort(arguments []interface{}) (interface{}, error) {
 }
 func jpfSortBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
+	root := arguments[1].(interface{})
 	arr := arguments[2].([]interface{})
 	exp := arguments[3].(expRef)
 	node := exp.ref
@@ -927,26 +933,26 @@ func jpfSortBy(arguments []interface{}) (interface{}, error) {
 	} else if len(arr) == 1 {
 		return arr, nil
 	}
-	start, err := intr.Execute(node, arr[0])
+	start, err := intr.execute(node, arr[0], root)
 	if err != nil {
 		return nil, err
 	}
 	if _, ok := start.(float64); ok {
-		sortable := &byExprFloat{intr, node, arr, false}
+		sortable := &byExprFloat{intr, root, node, arr, false}
 		sort.Stable(sortable)
 		if sortable.hasError {
 			return nil, errors.New("error in sort_by comparison")
 		}
 		return arr, nil
 	} else if _, ok := start.(json.Number); ok {
-		sortable := &byExprJsonNum{intr, node, arr, false}
+		sortable := &byExprJsonNum{intr, root, node, arr, false}
 		sort.Stable(sortable)
 		if sortable.hasError {
 			return nil, errors.New("error in sort_by comparison")
 		}
 		return arr, nil
 	} else if _, ok := start.(string); ok {
-		sortable := &byExprString{intr, node, arr, false}
+		sortable := &byExprString{intr, root, node, arr, false}
 		sort.Stable(sortable)
 		if sortable.hasError {
 			return nil, errors.New("error in sort_by comparison")
@@ -977,6 +983,7 @@ func jpfDedup(arguments []interface{}) (interface{}, error) {
 }
 func jpfDedupBy(arguments []interface{}) (interface{}, error) {
 	intr := arguments[0].(*treeInterpreter)
+	root := arguments[1].(interface{})
 	arr := arguments[2].([]interface{})
 	exp := arguments[3].(expRef)
 	node := exp.ref
@@ -989,7 +996,7 @@ func jpfDedupBy(arguments []interface{}) (interface{}, error) {
 	final := make([]interface{}, len(arr))
 	j := 0
 	for _, elem := range arr {
-		val, err := intr.Execute(node, elem)
+		val, err := intr.execute(node, elem, root)
 		if err != nil {
 			return nil, err
 		}
