@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+	"math/rand"
+	"time"
 	conv "github.com/cstockton/go-conv"
 )
 
@@ -46,6 +48,10 @@ type byExprString struct {
 	node     ASTNode
 	items    []interface{}
 	hasError bool
+}
+
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 func (a *byExprString) Len() int {
@@ -323,6 +329,13 @@ func newFunctionCaller() *functionCaller {
 				{types: []jpType{jpObject}},
 			},
 			handler: jpfItems,
+		},
+		"shuffle": {
+			name: "shuffle",
+			arguments: []argSpec{
+				{types: []jpType{jpArray}},
+			},
+			handler: jpfShuffle,
 		},
 		"sort": {
 			name: "sort",
@@ -901,6 +914,16 @@ func jpfItems(arguments []interface{}) (interface{}, error) {
 		collected = append(collected, []interface{}{key, value})
 	}
 	return collected, nil
+}
+func jpfShuffle(arguments []interface{}) (interface{}, error) {
+	arr := arguments[0].([]interface{})
+	final := make([]interface{}, len(arr))
+	copy(final, arr)
+	for i := len(final) - 1; i > 0; i-- {
+		j := rand.Intn(i+1)
+		final[i], final[j] = final[j], final[i]
+	}
+	return final, nil
 }
 func jpfSort(arguments []interface{}) (interface{}, error) {
 	if items, ok := toArrayNum(arguments[0]); ok {
