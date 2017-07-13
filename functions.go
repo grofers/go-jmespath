@@ -168,10 +168,12 @@ func (a *byExprJsonNum) Less(i, j int) bool {
 
 type functionCaller struct {
 	functionTable map[string]functionEntry
+	customFnCaller *customFunctionCaller
 }
 
 func newFunctionCaller() *functionCaller {
 	caller := &functionCaller{}
+	caller.customFnCaller = newCustomFunctionCaller()
 	caller.functionTable = map[string]functionEntry{
 		"length": {
 			name: "length",
@@ -488,6 +490,9 @@ func (a *argSpec) typeCheck(arg interface{}) error {
 }
 
 func (f *functionCaller) CallFunction(name string, arguments []interface{}, intr *treeInterpreter, rootValue interface{}) (interface{}, error) {
+	if f.customFnCaller.canCall(name) {
+		return f.customFnCaller.callFunction(name, arguments, intr, rootValue)
+	}
 	entry, ok := f.functionTable[name]
 	if !ok {
 		return nil, errors.New("unknown function: " + name)
