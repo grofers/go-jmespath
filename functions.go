@@ -371,6 +371,14 @@ func newFunctionCaller() *functionCaller {
 			handler:   jpfDedupBy,
 			hasExpRef: true,
 		},
+		"slice": {
+			name: "slice",
+			arguments: []argSpec{
+				{types: []jpType{jpArray}},
+				{types: []jpType{jpNumber}, variadic: true},
+			},
+			handler: jpfSlice,
+		},
 		"join": {
 			name: "join",
 			arguments: []argSpec{
@@ -1036,6 +1044,36 @@ func jpfDedupBy(arguments []interface{}) (interface{}, error) {
 	}
 	final = final[:j]
 	return final, nil
+}
+func jpfSlice(arguments []interface{}) (interface{}, error) {
+	if len(arguments) < 3 || len(arguments) > 4 {
+		return nil, errors.New("incorrect number of args")
+	}
+	arr := arguments[0].([]interface{})
+	start, err := conv.Int64(arguments[1])
+	if err != nil {
+		panic(err)
+	}
+	end, err := conv.Int64(arguments[2])
+	if err != nil {
+		panic(err)
+	}
+	step := int64(1)
+	if len(arguments) > 3 {
+		step, err = conv.Int64(arguments[3])
+		if err != nil {
+			panic(err)
+		}
+	}
+	length := int64(len(arr))
+	new_arr := []interface{} {}
+	if start < 0 || start >= length {
+		return new_arr, nil
+	}
+	for i := start; i < end && i < length; i = i + step {
+		new_arr = append(new_arr, arr[i])
+	}
+	return new_arr, nil
 }
 func jpfJoin(arguments []interface{}) (interface{}, error) {
 	sep := arguments[0].(string)
