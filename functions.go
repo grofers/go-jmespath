@@ -219,6 +219,14 @@ func newFunctionCaller() *functionCaller {
 			},
 			handler: jpfContains,
 		},
+		"contains_any": {
+			name: "contains_any",
+			arguments: []argSpec{
+				{types: []jpType{jpArray, jpString}},
+				{types: []jpType{jpAny}},
+			},
+			handler: jpfContainsAny,
+		},
 		"ends_with": {
 			name: "ends_with",
 			arguments: []argSpec{
@@ -582,6 +590,18 @@ func jpfContains(arguments []interface{}) (interface{}, error) {
 		if DeepEqual(item, el) {
 			return true, nil
 		}
+	}
+	return false, nil
+}
+func jpfContainsAny(arguments []interface{}) (interface{}, error) {
+	search := arguments[0].([]interface{})
+	els := arguments[1].([]interface{})
+	for _, item := range search {
+		for _, el := range els {
+			if DeepEqual(item, el) {
+				return true, nil
+			}
+	}
 	}
 	return false, nil
 }
