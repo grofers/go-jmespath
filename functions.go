@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	conv "github.com/cstockton/go-conv"
 	"math"
+	"math/rand"
 	"reflect"
 	"sort"
 	"strings"
-	"unicode/utf8"
-	"math/rand"
 	"time"
-	conv "github.com/cstockton/go-conv"
+	"unicode/utf8"
 )
 
 type jpFunction func(arguments []interface{}) (interface{}, error)
@@ -167,7 +167,7 @@ func (a *byExprJsonNum) Less(i, j int) bool {
 }
 
 type functionCaller struct {
-	functionTable map[string]functionEntry
+	functionTable  map[string]functionEntry
 	customFnCaller *customFunctionCaller
 }
 
@@ -218,6 +218,14 @@ func newFunctionCaller() *functionCaller {
 				{types: []jpType{jpAny}},
 			},
 			handler: jpfContains,
+		},
+		"contains_any": {
+			name: "contains_any",
+			arguments: []argSpec{
+				{types: []jpType{jpArray}},
+				{types: []jpType{jpAny}},
+			},
+			handler: jpfContainsAny,
 		},
 		"ends_with": {
 			name: "ends_with",
@@ -585,6 +593,18 @@ func jpfContains(arguments []interface{}) (interface{}, error) {
 	}
 	return false, nil
 }
+func jpfContainsAny(arguments []interface{}) (interface{}, error) {
+	search := arguments[0].([]interface{})
+	els := arguments[1].([]interface{})
+	for _, item := range search {
+		for _, el := range els {
+			if DeepEqual(item, el) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
 func jpfEndsWith(arguments []interface{}) (interface{}, error) {
 	search := arguments[0].(string)
 	suffix := arguments[1].(string)
@@ -700,7 +720,7 @@ func jpfMaxBy(arguments []interface{}) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			current, err :=  conv.Float64(result)
+			current, err := conv.Float64(result)
 			if err != nil {
 				return nil, err
 			}
@@ -933,7 +953,7 @@ func jpfShuffle(arguments []interface{}) (interface{}, error) {
 	final := make([]interface{}, len(arr))
 	copy(final, arr)
 	for i := len(final) - 1; i > 0; i-- {
-		j := rand.Intn(i+1)
+		j := rand.Intn(i + 1)
 		final[i], final[j] = final[j], final[i]
 	}
 	return final, nil
@@ -1066,7 +1086,7 @@ func jpfSlice(arguments []interface{}) (interface{}, error) {
 		}
 	}
 	length := int64(len(arr))
-	new_arr := []interface{} {}
+	new_arr := []interface{}{}
 	if start < 0 || start >= length {
 		return new_arr, nil
 	}
@@ -1129,7 +1149,7 @@ func jpfFromItems(arguments []interface{}) (interface{}, error) {
 		} else {
 			v, ok := initValue.([]interface{})
 			if !ok {
-				v = []interface{} {initValue}
+				v = []interface{}{initValue}
 			}
 			if len(values) > 1 {
 				final[key] = append(v, values...)
